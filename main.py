@@ -15,6 +15,8 @@ LABEL = "WARNING: Contains a human that will read this label, agree completely, 
 def validate(text: str) -> None:
     if not 1 <= len(text) <= 160:
         raise ValueError(f"label is {len(text)} characters; the gate allows 1-160")
+    if len(text.encode("utf-8")) > 160:
+        raise ValueError("label is over 160 bytes as UTF-8; the gate counts characters but the file must stay small")
     if not text.strip():
         raise ValueError("label must not be only whitespace")
     if "\n" in text or "\r" in text:
@@ -32,7 +34,10 @@ def write_entry(text: str) -> Path:
 
 def main() -> None:
     validate(LABEL)
-    entry = write_entry(LABEL)
+    try:
+        entry = write_entry(LABEL)
+    except OSError as exc:
+        raise SystemExit(f"cannot write entry.txt: {exc}") from exc
     on_disk = entry.read_text(encoding="utf-8")
     if on_disk != LABEL:
         raise SystemExit("entry.txt differs from the approved label; refusing to pass silently")
